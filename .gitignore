@@ -1,0 +1,30 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.env
+
+# --- Poetry / pipenv exports ---
+poetry.lock
+
+# --- Node / Frontend ---
+frontend/ui/node_modules/
+frontend/ui/dist/
+frontend/ui/.vite/
+*.log
+
+# --- VSCode & JetBrains ---
+.vscode/
+.idea/
+
+# --- OS cruft ---
+.DS_Store
+Thumbs.db
+
+# --- Testing & coverage ---
+htmlcov/
+.coverage
+.cache/
