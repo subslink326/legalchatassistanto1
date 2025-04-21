@@ -1,0 +1,14 @@
+{
+  "name": "legal-assistant-ai-electron",
+  "version": "0.1.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "build:ts": "tsc",
+    "start": "npm run build:ts && electron ."
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^23.6.0",
+    "typescript": "^5.1.6"
+  }
+}

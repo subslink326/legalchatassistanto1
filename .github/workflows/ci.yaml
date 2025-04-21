@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: legal_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U user"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports: ["6333:6333"]
+      elastic:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
+        env:
+          discovery.type: single-node
+        ports: ["9200:9200"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+      - name: Wait for services
+        run: sleep 20
+      - name: Init DB
+        run: |
+          python - << 'PY'
+          import asyncio
+          from backend.db.database import init_models
+          asyncio.run(init_models())
+          PY
+      - name: Run tests
+        run: pytest -q

@@ -1,0 +1,6 @@
+{
+  "appId": "com.legalassistant.ai",
+  "productName": "Legal Assistant AI",
+  "directories": { "output": "dist", "buildResources": "icons" },
+  "files": ["dist/**/*"]
+}

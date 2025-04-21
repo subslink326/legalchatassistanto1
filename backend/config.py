@@ -1,4 +1,8 @@
 """
+    # JWT configuration
+    jwt_secret: str = "CHANGE_THIS_TO_A_STRONG_SECRET_IN_PRODUCTION"
+    # JWT configuration
+    jwt_secret: str = "CHANGE_THIS_TO_A_STRONG_SECRET_IN_PRODUCTION"
 backend/config.py
 -----------------
 Centralized runtime configuration using **Pydantic v2**.

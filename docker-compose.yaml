@@ -1,63 +1,17 @@
-version: "3.8"
-
+version: "3.9"
 services:
-  # ---------- Databases & Indexers ----------
-  postgres:
-    image: postgres:16
-    container_name: legal_ai_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: legal_ai
-      POSTGRES_USER: legal_ai
-      POSTGRES_PASSWORD: legal_ai_pw
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  qdrant:
-    image: qdrant/qdrant:v1.7.3
-    container_name: legal_ai_qdrant
-    restart: unless-stopped
-    volumes:
-      - qdrant_storage:/qdrant/storage
-    ports:
-      - "6333:6333"
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    container_name: legal_ai_elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node         # no cluster in dev
-      - xpack.security.enabled=false       # turn off auth for local dev
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-
-  # ---------- FastAPI backend ----------
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile               # simple Python image + poetry/pip install
-    container_name: legal_ai_backend
-    env_file:
-      - .env                               # holds OPENAI_API_KEY etc.
-    depends_on:
-      - postgres
-      - qdrant
-      - elasticsearch
+    build: .
     ports:
       - "8000:8000"
-    command: >
-      uvicorn backend.app:app
-      --host 0.0.0.0
-      --port 8000
-      --reload                            # hot‑reload for local dev
-
-volumes:
-  pgdata:
-  qdrant_storage:
-  esdata:
+    env_file: .env
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
