@@ -1,63 +1,94 @@
 """
-Centralised runtime configuration.
+backend/config.py
+-----------------
+Centralized runtime configuration using **Pydantic v2**.
 
-Import `get_settings()` anywhere in the backend to access environment
-variables with type safety and sensible defaults.
+* Loads `.env` (or OS‑level env vars in Docker/K8s).
+* Provides typed access to DB URLs, API keys, feature flags.
+* Exposes a FastAPI dependency helper (`get_settings`) so routers / modules
+  can request the config via DI without re‑parsing the file.
 """
 
 from functools import lru_cache
 from pathlib import Path
-from pydantic import BaseSettings, Field, PostgresDsn, AnyUrl
+from enum import Enum
+
+from pydantic import AnyHttpUrl, Field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
+
+
+# --------------------------------------------------------------------------- #
+# 1.  Ensure .env is read when running locally (Docker/K8s will supply vars)  #
+# --------------------------------------------------------------------------- #
+env_path = Path(__file__).resolve().parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path, override=False)
+
+# -------------------------- #
+# 2.  App‑level declarations #
+# -------------------------- #
+class AppEnv(str, Enum):
+    DEVELOPMENT = "development"
+    PRODUCTION = "production"
+    TEST = "test"
 
 
 class Settings(BaseSettings):
-    # --- Database (Postgres) ---
-    postgres_host: str = "postgres"
-    postgres_port: int = 5432
-    postgres_db: str = "legal_ai"
-    postgres_user: str = "legal_ai"
-    postgres_password: str = "legal_ai_pw"
-    postgres_dsn: PostgresDsn | None = None  # Optional full DSN override
+    """Typed config validated at start‑up."""
 
-    # --- Vector store (Qdrant) ---
-    qdrant_url: AnyUrl = Field(
-        "http://qdrant:6333",
-        description="Qdrant base URL inside the Docker network",
+    # --- Pydantic settings config ---
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        env_file=".env",  # fallback if dotenv didn’t load
+        env_file_encoding="utf-8",
     )
 
-    # --- Full‑text search (Elasticsearch) ---
-    elastic_url: AnyUrl = Field(
-        "http://elasticsearch:9200",
-        description="Elasticsearch base URL inside the Docker network",
-    )
+    # --- Core ---
+    app_env: AppEnv = Field(AppEnv.DEVELOPMENT, alias="APP_ENV")
+    app_port: int = Field(8000, alias="APP_PORT")
+
+    # --- Security ---
+    jwt_secret: str = Field(..., alias="JWT_SECRET", min_length=16)
+
+    # --- Databases ---
+    database_url: str = Field(..., alias="DATABASE_URL")
+    qdrant_url: AnyHttpUrl = Field(..., alias="QDRANT_URL")
+    elastic_url: AnyHttpUrl = Field(..., alias="ELASTIC_URL")
 
     # --- LLM / Embeddings ---
-    openai_api_key: str | None = None
-    ollama_host: str | None = None  # in case you switch to local Llama 3
+    openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
+    openai_model: str = Field("gpt-4o", alias="OPENAI_MODEL")
+    llama_model_path: Path | None = Field(None, alias="LLAMA_MODEL_PATH")
 
-    # --- Misc ---
-    debug: bool = True
-    project_root: Path = Path(__file__).resolve().parents[1]
+    # --- Feature flags ---
+    enable_telemetry: bool = Field(False, alias="ENABLE_TELEMETRY")
+    demo_mode: bool = Field(False, alias="DEMO_MODE")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    # ----------------- Validators / helpers ----------------- #
+    @validator("database_url")
+    def _must_be_postgres(cls, v: str) -> str:  # noqa: N805
+        if not v.startswith(("postgresql://", "postgresql+")):
+            raise ValueError("DATABASE_URL must be a Postgres connection string")
+        return v
 
-    # ---------- Helper properties ----------
     @property
-    def database_uri(self) -> str:
-        """Return a full SQLAlchemy DSN."""
-        if self.postgres_dsn:
-            return str(self.postgres_dsn)
+    def is_dev(self) -> bool:  # convenience flag
+        return self.app_env == AppEnv.DEVELOPMENT
 
-        return (
-            f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}"
-            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
+    @property
+    def is_prod(self) -> bool:
+        return self.app_env == AppEnv.PRODUCTION
 
 
+# --------------------------------------------------------------------------- #
+# 3.  Singleton accessor (avoids re‑parsing env on every injection)           #
+# --------------------------------------------------------------------------- #
 @lru_cache
 def get_settings() -> Settings:
-    """FastAPI will call this via dependency injection; cached for speed."""
+    """FastAPI dependency override‑friendly accessor."""
     return Settings()
+
+
+# Eagerly create the singleton for easy `from config import settings` import.
+settings: Settings = get_settings()
