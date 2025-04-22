@@ -1,17 +1,84 @@
-version: "3.9"
 services:
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/legalchatassistant
+      - QDRANT_URL=http://qdrant:6333
+      - ELASTIC_URL=http://elastic:9200
+      - APP_ENV=development
+      - JWT_SECRET=change-me-please-use-a-secure-value-at-least-32-chars
+      - DB_POOL_SIZE=10
+      - DB_MAX_OVERFLOW=20
+      - OPENAI_API_KEY=sk-your-openai-key
+      - OPENAI_MODEL=gpt-4o
+    volumes:
+      - ./storage:/app/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+  
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=legalchatassistant
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.7.4
     ports:
       - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+  
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
     environment:
       - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
     ports:
       - "9200:9200"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  elastic_data:

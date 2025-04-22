@@ -11,7 +11,8 @@ from backend.config import settings
 from backend.db.database import init_models
 from backend.routers.files import router as files_router
 from backend.routers.projects import router as projects_router
-from backend.routers.intelligence import router as intel_router  # stub, Phase 7
+# Temporarily disabled for simplified startup
+# from backend.routers.intelligence import router as intel_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -33,14 +34,16 @@ def create_app() -> FastAPI:
     from backend.routers.auth import router as auth_router
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
-    # Mount auth router
-    from backend.routers.auth import router as auth_router
-    app.include_router(auth_router, prefix="/auth", tags=["auth"])
-
     # Mount routers
     app.include_router(files_router,    prefix="/files",       tags=["files"])
     app.include_router(projects_router, prefix="/projects",    tags=["projects"])
-    app.include_router(intel_router,    prefix="/intelligence", tags=["intelligence"])
+    # Intelligence router temporarily disabled
+    # app.include_router(intel_router,    prefix="/intelligence", tags=["intelligence"])
+    
+    # Health check endpoint
+    @app.get("/health", tags=["health"])
+    async def health_check():
+        return {"status": "ok", "version": app.version}
 
     # Dev‑only: auto‑create tables on startup
     @app.on_event("startup")

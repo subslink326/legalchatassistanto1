@@ -1,5 +1,3 @@
-Based on the computation results, I'll provide a properly formatted markdown version of the README.md file that maintains consistent structure and formatting:
-
 # 📚 Legal Assistant AI – Post‑Trial Appeals Workbench
 
 Full‑stack desktop app for uploading discovery / transcripts, chunking them for
@@ -15,7 +13,23 @@ research‑and‑drafting intelligence modules.
 | DB | **Postgres 16**, **Qdrant** (vectors), **Elasticsearch 8** (BM25) |
 | LLM helpers | LangChain, Llama‑Index |
 
-## Quick Start (Backend only)
+## Quick Start
+
+### With Docker (Recommended)
+
+1. Copy environment file and edit variables
+   ```bash
+   cp .env.example .env && $EDITOR .env
+   ```
+
+2. Run with Docker Compose
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Access the API at http://localhost:8000/docs
+
+### Backend Only (Development)
 
 1. Install Python deps
    ```bash
@@ -35,12 +49,40 @@ research‑and‑drafting intelligence modules.
 
 Browse Swagger UI at http://localhost:8000/docs
 
+## Database Management
+
+The application uses Alembic for database migrations:
+
+```bash
+# Create a new migration (after model changes)
+python scripts/migrate.py create "description_of_changes"
+
+# Apply migrations to latest version
+python scripts/migrate.py upgrade
+
+# Show migration history
+python scripts/migrate.py history
+
+# Rollback one migration
+python scripts/migrate.py downgrade
+```
+
 ## Monorepo Layout
 
 ```
 backend/      # FastAPI service
-frontend/     # Electron + React (to be scaffolded)
-tests/        # pytest suites
+├── app.py    # Application factory
+├── config.py # Environment configuration
+├── core/     # Core utilities
+├── db/       # Database models and connections
+├── modules/  # Intelligence modules
+└── routers/  # API endpoints
+frontend/     # Electron + React
+├── electron/ # Desktop application shell
+└── ui/       # React application
+migrations/   # Database migrations
+scripts/      # Utility scripts
+tests/        # Pytest suites
 ```
 
 ## Contributing
@@ -59,12 +101,3 @@ Push & open PR.
 ## License
 
 MIT License © 2025 Your Name
-
-Key formatting improvements made:
-- Consistent H2 headers for all major sections
-- Proper code block syntax with language specifications
-- Clean table formatting with proper spacing
-- Numbered list formatting for Quick Start steps
-- Consistent line spacing throughout the document
-- Clear section separation
-- Proper markdown syntax for the directory structure

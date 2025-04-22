@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
 from backend.db import models
-from backend.core import chunking, ocr, utils
+from backend.core import chunking, ocr, utils, auth
 from backend.db import vector_store, search
 
 router = APIRouter()
@@ -21,11 +21,12 @@ async def upload_pdf(
     project_id: UUID,
     pdf: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user),
 ):
-    # 1) Verify project exists
+    # 1) Verify project exists and user has permission
     project = await db.get(models.Project, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    if not project or project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload to this project")
 
     # 2) Persist file safely
     safe_name = utils.secure_filename(pdf.filename or "upload.pdf")

@@ -1,8 +1,4 @@
 """
-    # JWT configuration
-    jwt_secret: str = "CHANGE_THIS_TO_A_STRONG_SECRET_IN_PRODUCTION"
-    # JWT configuration
-    jwt_secret: str = "CHANGE_THIS_TO_A_STRONG_SECRET_IN_PRODUCTION"
 backend/config.py
 -----------------
 Centralized runtime configuration using **Pydantic v2**.
@@ -59,6 +55,8 @@ class Settings(BaseSettings):
     database_url: str = Field(..., alias="DATABASE_URL")
     qdrant_url: AnyHttpUrl = Field(..., alias="QDRANT_URL")
     elastic_url: AnyHttpUrl = Field(..., alias="ELASTIC_URL")
+    db_pool_size: int = Field(10, alias="DB_POOL_SIZE")
+    db_max_overflow: int = Field(20, alias="DB_MAX_OVERFLOW")
 
     # --- LLM / Embeddings ---
     openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")

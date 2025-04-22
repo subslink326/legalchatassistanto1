@@ -10,6 +10,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
 import logging
+import tenacity
 
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -36,8 +37,9 @@ engine = create_async_engine(
     settings.database_url,
     echo=settings.is_dev,           # SQL echo only in dev
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
+    connect_args={"connect_timeout": 10},
 )
 
 async_session: async_sessionmaker[AsyncSession] = async_sessionmaker(
@@ -63,8 +65,17 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # -------------------- #
 # 3.  Utility helpers  #
 # -------------------- #
+@tenacity.retry(
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_exponential(multiplier=1, min=1, max=10),
+    retry=tenacity.retry_if_exception_type(Exception),
+    reraise=True,
+)
 async def init_models() -> None:
-    """Create tables in dev/demo environments (not for production migrations)."""
+    """Create tables in dev/demo environments (not for production migrations).
+    
+    Note: For production, use Alembic migrations instead.
+    """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         log.info("Database schema created.")
