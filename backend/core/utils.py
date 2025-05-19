@@ -13,6 +13,7 @@ import os
 import re
 from pathlib import Path
 from typing import List
+from functools import lru_cache
 
 from backend.config import settings
 
@@ -56,10 +57,14 @@ def _openai_embedding(texts: List[str]) -> List[List[float]]:
 
 
 def _local_embedding(texts: List[str]) -> List[List[float]]:
-    # Placeholder: load your sentence‑transformers model here.
+    # Placeholder: load your sentence-transformers model here.
     from sentence_transformers import SentenceTransformer
 
-    model = SentenceTransformer("intfloat/e5-large-v2")
+    @lru_cache(maxsize=1)
+    def _load_model() -> SentenceTransformer:
+        return SentenceTransformer("intfloat/e5-large-v2")
+
+    model = _load_model()
     return model.encode(texts, normalize_embeddings=True).tolist()
 
 

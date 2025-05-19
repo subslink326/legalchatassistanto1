@@ -5,13 +5,10 @@ Stubbed precedent & split checks; replace with real legal‑search integrations.
 from __future__ import annotations
 import hashlib
 import logging
-from typing import List
-
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 from backend.core import utils
 from backend.db.vector_store import similarity_search
-from backend.db.search import bm25_search
 from backend.config import settings
 
 log = logging.getLogger(__name__)
